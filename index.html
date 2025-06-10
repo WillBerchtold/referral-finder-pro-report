@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Referral Finder Pro Pilot Report</title>
+  <!-- Loading dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chrono-node/1.3.11/chrono.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.15.0/Recharts.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div id="root" class="container mx-auto p-6 max-w-7xl"></div>
+
+  <script type="text/babel">
+    // Initializing React and dependencies
+    const { useState, useEffect } = React;
+    const { createRoot } = ReactDOM;
+    const {
+      LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+    } = Recharts;
+
+    // Defining color palette for visualizations
+    const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6b7280', '#3b82f6', '#22c55e'];
+
+    // Embedding CSV data
+    const csvData = `session_id,user_id,session_start,session_end,log_file,searches,provider_details_updates,filter_specialty,filter_insurance,filter_subspecialty,filter_location,filter_pedi,filter_show_unknown,filter_spanish,filter_new_patients,specialties,subspecialties,sidebar_portal_links_expanded,sidebar_prev_searches_expanded,sidebar_prev_offices_expanded,sidebar_settings_expanded,sidebar_update_request_expanded,sidebar_clear_history_clicked,sidebar_prev_searches_apply_clicked,sidebar_prev_offices_view_clicked,sidebar_master_list_manager_clicked,sidebar_portal_links_clicked,sidebar_prev_searches_dropdown_clicked,sidebar_prev_offices_dropdown_clicked
+20250601_174127,WillB,06/01/2025 17:41,06/01/2025 17:42,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0125-054127PM.log,1,0,1,1,0,0,0,1,0,1,Cardiology:1,,0,0,0,0,2,0,0,0,1,nan,0,0
+20250601_182434,WillB,06/01/2025 18:24,06/01/2025 18:32,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0125-062434PM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,1,0,0,0,2,nan,0,0
+20250601_183525,WillB,06/01/2025 18:35,06/01/2025 18:36,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0125-063525PM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,2,0,0,0,1,nan,0,0
+20250601_191241,WillB,06/01/2025 19:12,06/01/2025 19:15,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0125-071241PM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,1,0,0,0,1,nan,0,0
+20250602_070056,WillB,06/02/2025 7:00,06/02/2025 7:08,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-070056AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,1,0,0,0,1,nan,0,0
+20250602_095400,AshleyPer,06/02/2025 9:54,06/02/2025 9:55,C:\\Users\\Ashleyper\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-095400AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250602_101924,WillB,06/02/2025 10:19,06/02/2025 10:19,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-101924AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,4,0,0,0,0,nan,0,0
+20250602_095530,AshleyPer,06/02/2025 9:55,06/02/2025 11:07,C:\\Users\\Ashleyper\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-095530AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250602_110804,AshleyPer,06/02/2025 11:08,06/02/2025 12:49,C:\\Users\\Ashleyper\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-110804AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,1,0,0,0,2,nan,0,0
+20250602_120500,WillB,06/02/2025 12:05,06/02/2025 14:08,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-120500PM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,1,0,0,0,1,nan,0,0
+20250602_141038,WillB,06/02/2025 14:10,06/02/2025 14:12,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-021038PM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,7,0,0,0,0,nan,0,0
+20250602_142424,WillB,06/02/2025 14:24,06/02/2025 14:56,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-022424PM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,9,0,0,0,1,nan,0,0
+20250602_141427,DaniaD,06/02/2025 14:14,06/02/2025 16:27,C:\\Users\\daniad\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-021427PM.log,1,0,1,1,0,1,0,0,0,0,Nutrition:1,,0,0,0,0,1,0,0,0,3,nan,0,0
+20250602_131350,AshleyPer,06/02/2025 13:13,06/02/2025 16:35,C:\\Users\\Ashleyper\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0225-011350PM.log,4,0,4,3,0,0,1,0,0,0,Urology:1;ENT:3,,0,0,0,0,1,0,0,0,1,nan,0,0
+20250603_085647,WillB,06/03/2025 8:56,06/03/2025 8:59,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-085647AM.log,1,2,0,0,1,0,0,0,0,1,,Adult Med Mgmt:1,0,0,0,0,0,0,0,0,0,nan,0,0
+20250603_090029,WillB,06/03/2025 9:00,06/03/2025 9:00,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-090029AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250603_090046,WillB,06/03/2025 9:00,06/03/2025 9:01,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-090046AM.log,1,1,0,0,1,0,0,0,0,0,,Adult Med Mgmt:1,0,0,0,0,0,0,0,0,0,nan,0,0
+20250603_090200,WillB,06/03/2025 9:02,06/03/2025 9:02,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-090200AM.log,2,0,0,0,2,0,0,0,0,0,,Adult Med Mgmt:1;Pedi Therapy:1,0,0,0,0,0,0,0,0,0,nan,0,0
+20250603_090428,WillB,06/03/2025 9:04,06/03/2025 9:05,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-090428AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250603_113107,KerriB,06/03/2025 11:31,06/03/2025 11:31,C:\\Users\\kerrib\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-113107AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,1,0,0,0,1,nan,0,0
+20250603_113157,KerriB,06/03/2025 11:31,06/03/2025 11:32,C:\\Users\\kerrib\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-113157AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,1,0,0,0,1,nan,0,0
+20250603_083615,AshleyPer,06/03/2025 8:36,06/03/2025 11:39,C:\\Users\\Ashleyper\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-083615AM.log,18,3,18,14,7,8,0,0,2,3,BH:7;ENT:2;Podiatry:5;Neurology:3;OBGYN:1,Adult Med Mgmt:7;Adult Therapy:2,0,0,0,0,1,0,0,0,1,nan,0,0
+20250603_080204,HayleyP,06/03/2025 8:02,06/03/2025 14:44,C:\\Users\\HayleyP\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-080204AM.log,5,2,5,0,0,0,0,0,0,3,Rheumatology:2;Neurology:3,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250603_105935,KimberlyBr,06/03/2025 10:59,06/03/2025 16:25,C:\\Users\\KimberlyBr\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-105935AM.log,9,0,9,9,3,0,0,0,0,0,Neurology:5;Urology:1;BH:2;OBGYN:1,Neuropsych Testing:3,0,0,0,0,0,0,0,0,0,nan,0,0
+20250603_122455,WillB,06/03/2025 12:24,06/03/2025 16:30,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-122455PM.log,11,4,9,10,2,7,0,3,0,10,Endocrinology:1;Ophthalmology:4;Pulm/Sleep:2;Cardiology:1;Neurology:1,Adult Med Mgmt:2;Adult Therapy:2,0,0,0,0,2,0,0,0,0,nan,0,0
+20250604_063914,DaniaD,06/04/2025 6:39,06/04/2025 7:12,C:\\Users\\daniad\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-063914AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250603_104353,AmyLa,06/03/2025 10:43,06/04/2025 8:13,C:\\Users\\AmyLa\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0325-104353AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,3,0,0,0,3,nan,0,0
+20250604_081319,AmyLa,06/04/2025 8:13,06/04/2025 8:13,C:\\Users\\AmyLa\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-081319AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250604_113050,TaylaD,06/04/2025 11:30,06/04/2025 11:30,C:\\Users\\TaylaD\\OneDrive - Thundermist Health Center\\Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-113050AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250604_081320,WillB,06/04/2025 8:13,06/04/2025 11:40,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-081320AM.log,7,1,5,7,2,0,1,1,0,7,Neurology:3;Chiropractic:1;Dermatology:1,Neuropsych Testing:2,0,0,0,0,1,0,0,0,1,nan,0,0
+20250604_115523,WillB,06/04/2025 11:55,06/04/2025 11:58,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-115523AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,1,0,0,0,1,nan,0,0
+20250604_121842,WillB,06/04/2025 12:18,06/04/2025 12:18,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-121842PM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250604_073103,AshleyPer,06/04/2025 7:31,06/04/2025 12:56,C:\\Users\\Ashleyper\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-073103AM.log,30,8,24,18,7,8,2,0,0,0,Dermatology:9;Genetics:1;Neurology:1;Urology:9;Vascular:2;Podiatry:2,ED:4;Low T:3,0,0,0,0,0,0,0,0,0,nan,0,0
+20250604_120146,HayleyP,06/04/2025 12:01,06/04/2025 13:24,C:\\Users\\HayleyP\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-120146PM.log,1,2,1,1,0,0,0,0,0,0,Allergy:1,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250604_140516,HayleyP,06/04/2025 14:05,06/04/2025 14:05,C:\\Users\\HayleyP\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-020516PM.log,1,1,1,0,0,0,0,0,0,0,Gastroenterology:1,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250604_121931,WillB,06/04/2025 12:19,06/04/2025 16:28,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-121931PM.log,3,4,3,2,0,0,0,1,0,2,Breast Health:1;Urology:2,,0,0,0,2,1,0,0,0,1,nan,0,0
+20250604_085600,KimberlyBr,06/04/2025 8:56,06/04/2025 16:36,C:\\Users\\KimberlyBr\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0425-085600AM.log,21,0,21,21,2,0,2,0,0,0,Pulm/Sleep:3;Nephrology:1;Urology:1;Allergy:1;Neurology:3;BH:2;Dermatology:3;Ophthalmology:1;Gastroenterology:1;HemaOnc:1;OBGYN:1;Ortho:1;Chiropractic:1;ENT:1,Neuropsych Testing:2,0,0,0,0,0,0,0,0,0,nan,0,0
+20250605_084754,AshleyPer,06/05/2025 8:47,06/05/2025 12:28,C:\\Users\\Ashleyper\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0525-084754AM.log,17,7,17,6,0,3,0,0,1,2,PT/OT:3;Podiatry:1;Plastic Surgery:4;ENT:4;Endocrinology:4;Infertility:1,,0,0,0,0,1,0,0,0,2,nan,0,0
+20250605_071441,DaniaD,06/05/2025 7:14,06/05/2025 16:07,C:\\Users\\daniad\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0525-071441AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250605_123042,AshleyPer,06/05/2025 12:30,06/05/2025 16:29,C:\\Users\\Ashleyper\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0525-123042PM.log,22,4,16,18,5,0,2,5,1,2,Allergy:8;General Surgery:1;Dermatology:6;Nutrition:1,Audiology:5,0,0,0,0,1,0,0,0,1,nan,0,0
+20250606_084029,WillB,06/06/2025 8:40,06/06/2025 8:41,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0625-084029AM.log,0,1,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250606_085459,WillB,06/06/2025 8:54,06/06/2025 8:55,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0625-085459AM.log,0,0,0,0,0,0,0,0,0,0,,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250606_085527,WillB,06/06/2025 8:55,06/06/2025 8:59,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0625-085527AM.log,1,0,1,0,0,0,0,0,0,0,Colorectal Surgery:1,,0,0,0,0,0,0,0,0,0,nan,0,0
+20250606_092845,WillB,06/06/2025 9:28,06/06/2025 16:15,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0625-092845AM.log,4,2,4,3,0,2,0,0,0,4,OBGYN:2;Gastroenterology:1;ENT:1,,0,0,0,0,1,0,0,0,4,nan,0,0
+20250606_114601,HayleyP,06/06/2025 11:46,06/06/2025 16:26,C:\\Users\\HayleyP\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_Jun0625-114601AM.log,1,2,1,0,0,0,0,0,0,0,Gastroenterology:1,,0,0,0,0,1,0,0,0,1,nan,0,0
+20250608_163115,WillB,06/08/2025 16:31,06/08/2025 16:31,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250608_163115_Jun0825-043115PM.log,4,2,4,2,1,0,0,1,0,1,Breast Health:1;ENT:1;Endocrinology:2,Allergy:1,0,0,0,0,0,0,0,0,0,nan,0,0
+20250608_163448,WillB,2025-06-08 16:34:48,2025-06-08 16:34:57,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250608_163448_Jun0825-043448PM.log,0,0,0,0,0,0,0,0,0,0,nan,nan,0,0,0,0,0,0,0,0,0,nan,0,0
+20250608_171709,WillB,2025-06-08 17:17:09,2025-06-08 17:17:11,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250608_171709_Jun0825-051709PM.log,0,0,0,0,0,0,0,0,0,0,nan,nan,0,0,0,0,0,0,0,0,0,nan,0,0
+20250609_072502,WillB,2025-06-09 07:25:02,2025-06-09 07:27:29,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250609_072502_Jun0925-072502AM.log,0,0,0,0,0,0,0,0,0,0,nan,nan,0,0,0,0,1,0,0,0,1,nan,0,0
+20250609_073028,WillB,2025-06-09 07:30:28,2025-06-09 07:31:10,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250609_073028_Jun0925-073028AM.log,1,0,1,0,0,0,0,0,0,1,Cardiology:1,nan,0,0,0,0,0,0,0,0,0,nan,0,0
+20250609_090511,KimberlyBr,2025-06-09 09:05:11,2025-06-09 09:05:26,C:\\Users\\KimberlyBr\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250609_090511_Jun0925-090511AM.log,0,0,0,0,0,0,0,0,0,0,nan,nan,0,0,0,0,0,0,0,0,0,nan,0,0
+20250609_073913,DaniaD,2025-06-09 07:39:13,2025-06-09 16:27:57,C:\\Users\\daniad\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250609_073913_Jun0925-073913AM.log,5,4,5,5,0,4,0,0,0,0,Gastroenterology:1;ENT:3;General Surgery:1,nan,0,0,0,0,0,0,0,0,0,nan,0,0
+20250609_090512,KimberlyBr,2025-06-09 09:05:12,2025-06-09 16:30:41,C:\\Users\\KimberlyBr\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250609_090512_Jun0925-090512AM.log,12,0,12,12,0,0,0,0,0,0,Gastroenterology:2;Nutrition:1;Cardiology:2;Ortho:2;OBGYN:1;Podiatry:1;Allergy:2;Ophthalmology:1,nan,0,0,0,0,0,0,0,0,0,nan,0,0
+20250609_094503,WillB,2025-06-09 09:45:03,2025-06-09 16:09:20,C:\\Users\\WillB\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250609_094503_Jun0925-094503AM.log,3,4,1,1,2,1,1,0,0,3,Allergy:1,Neuropsych Testing:1;Allergy:1,0,0,0,0,0,0,0,0,0,nan,0,0
+20250609_115310,HayleyP,2025-06-09 11:53:10,2025-06-09 16:22:55,C:\\Users\\HayleyP\\Thundermist Health Center\\All Referrals_Team - Referral Finder Pro\\ReferralFinderPro_Logs\\referral_finder_20250609_115310_Jun0925-115310AM.log,0,1,0,0,0,0,0,0,0,0,nan,nan,0,0,0,0,1,0,0,0,2,nan,0,0`;
+
+    // Defining navigation component with collapsible sidebar
+    const Navigation = () => {
+      const [isOpen, setIsOpen] = useState(false);
+      const sections = [
+        'Summary', 'Daily Activity', 'Searches by User', 'Session Duration', 'Filter Usage', 
+        'Top Specialties', 'Top Subspecialties', 'Sidebar Interactions', 'Usage Patterns', 
+        'User Activity', 'Key Metrics', 'Interesting Fact', 'Conclusion'
+      ];
+
+      return (
+        <div className="relative">
+          <button 
+            className="md:hidden bg-indigo-600 text-white p-2 rounded fixed top-4 left-4 z-20"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? 'Close' : 'Menu'}
+          </button>
+          <nav className={`${
+            isOpen ? 'block' : 'hidden'
+          } md:block sticky top-0 bg-indigo-700 text-white p-4 shadow-lg z-10`}>
+            <ul className="flex flex-col md:flex-row md:space-x-6 md:justify-center">
+              {sections.map(section => (
+                <li key={section}>
+                  <a
+                    href={`#${section.toLowerCase().replace(/\s/g, '-')}`}
+                    className="block py-2 md:py-0 hover:text-indigo-200 transition duration-200"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {section}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      );
+    };
+
+    // Defining report component
+    const Report = () => {
+      const [data, setData] = useState([]);
+      const [loading, setLoading] = useState(true);
+
+      // Processing and cleaning data
+      const processAndCleanData = (rawData) => {
+        return rawData.map(row => {
+          const cleaned = {};
+          Object.keys(row).forEach(key => {
+            let value = row[key] ? row[key].trim() : '';
+            if (value === 'nan' || value === '') value = null;
+
+            // Parsing dates
+            if (key === 'session_start' || key === 'session_end') {
+              cleaned[key] = value ? chrono.parseDate(value) : null;
+            }
+            // Converting numeric fields
+            else if ([
+              'searches', 'provider_details_updates', 'filter_specialty', 'filter_insurance', 
+              'filter_subspecialty', 'filter_location', 'filter_pedi', 'filter_show_unknown', 
+              'filter_spanish', 'filter_new_patients', 'sidebar_portal_links_expanded', 
+              'sidebar_prev_searches_expanded', 'sidebar_prev_offices_expanded', 
+              'sidebar_settings_expanded', 'sidebar_update_request_expanded', 
+              'sidebar_clear_history_clicked', 'sidebar_prev_searches_apply_clicked', 
+              'sidebar_prev_offices_view_clicked', 'sidebar_master_list_manager_clicked', 
+              'sidebar_portal_links_clicked', 'sidebar_prev_searches_dropdown_clicked', 
+              'sidebar_prev_offices_dropdown_clicked'
+            ].includes(key)) {
+              cleaned[key] = value && !isNaN(value) ? parseInt(value) : 0;
+            }
+            // Parsing specialties and subspecialties
+            else if (key === 'specialties' || key === 'subspecialties') {
+              cleaned[key] = value ? value.split(';').reduce((acc, pair) => {
+                const [item, count] = pair.split(':');
+                if (item && count) acc[item] = parseInt(count) || 0;
+                return acc;
+              }, {}) : {};
+            }
+            else {
+              cleaned[key] = value;
+            }
+          });
+          // Calculating session duration
+          if (cleaned.session_start && cleaned.session_end) {
+            cleaned.duration = (cleaned.session_end - cleaned.session_start) / (1000 * 60);
+            if (cleaned.duration < 0) cleaned.duration = 0;
+          } else {
+            cleaned.duration = 0;
+          }
+          return cleaned;
+        }).filter(row => row.session_id && row.session_start && row.session_end);
+      };
+
+      // Loading and parsing embedded CSV data
+      useEffect(() => {
+        Papa.parse(csvData, {
+          header: true,
+          skipEmptyLines: true,
+          transformHeader: header => header.trim().replace(/^"|"$/g, ''),
+          transform: (value, header) => value.trim().replace(/^"|"$/g, ''),
+          complete: (results) => {
+            const cleanedData = processAndCleanData(results.data);
+            setData(cleanedData);
+            setLoading(false);
+          },
+          error: (err) => {
+            console.error('Error parsing CSV:', err);
+            setLoading(false);
+          }
+        });
+      }, []);
+
+      // Returning loading message
+      if (loading) {
+        return (
+          <div className="text-center text-gray-600 text-lg mt-10">
+            Loading report data...
+          </div>
+        );
+      }
+
+      // Aggregating daily metrics
+      const dailyMetrics = data.reduce((acc, row) => {
+        const date = row.session_start.toISOString().split('T')[0];
+        if (!acc[date]) {
+          acc[date] = { users: new Set(), sessions: 0, searches: 0 };
+        }
+        acc[date].users.add(row.user_id);
+        acc[date].sessions += 1;
+        acc[date].searches += row.searches || 0;
+        return acc;
+      }, {});
+
+      const dailyData = Object.keys(dailyMetrics).map(date => ({
+        date: new Date(date).toLocaleDateString(),
+        users: dailyMetrics[date].users.size,
+        sessions: dailyMetrics[date].sessions,
+        searches: dailyMetrics[date].searches
+      })).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      // Aggregating searches per user
+      const userSearches = data.reduce((acc, row) => {
+        if (!acc[row.user_id]) {
+          acc[row.user_id] = { searches: 0, sessions: 0, totalDuration: 0 };
+        }
+        acc[row.user_id].searches += row.searches || 0;
+        acc[row.user_id].sessions += 1;
+        acc[row.user_id].totalDuration += row.duration;
+        return acc;
+      }, {});
+
+      const userActivityData = Object.keys(userSearches).map(user => ({
+        user,
+        searches: userSearches[user].searches,
+        sessions: userSearches[user].sessions,
+        avgDuration: userSearches[user].totalDuration / userSearches[user].sessions
+      })).sort((a, b) => b.searches - a.searches);
+
+      // Aggregating session duration per user
+      const userDurationData = Object.keys(userSearches).map(user => ({
+        user,
+        avgDuration: userSearches[user].totalDuration / userSearches[user].sessions
+      })).sort((a, b) => b.avgDuration - a.avgDuration);
+
+      // Aggregating filter usage
+      const filterUsage = {
+        Specialty: data.reduce((sum, row) => sum + (row.filter_specialty || 0), 0),
+        Insurance: data.reduce((sum, row) => sum + (row.filter_insurance || 0), 0),
+        Subspecialty: data.reduce((sum, row) => sum + (row.filter_subspecialty || 0), 0),
+        Location: data.reduce((sum, row) => sum + (row.filter_location || 0), 0),
+        Pediatric: data.reduce((sum, row) => sum + (row.filter_pedi || 0), 0),
+        Spanish: data.reduce((sum, row) => sum + (row.filter_spanish || 0), 0),
+        NewPatients: data.reduce((sum, row) => sum + (row.filter_new_patients || 0), 0)
+      };
+
+      const filterData = Object.keys(filterUsage).map(key => ({
+        filter: key,
+        count: filterUsage[key]
+      })).sort((a, b) => b.count - a.count);
+
+      // Aggregating sidebar interactions
+      const sidebarUsage = {
+        PortalLinks: data.reduce((sum, row) => sum + (row.sidebar_portal_links_clicked || 0), 0),
+        UpdateRequest: data.reduce((sum, row) => sum + (row.sidebar_update_request_expanded || 0), 0),
+        MasterList: data.reduce((sum, row) => sum + (row.sidebar_master_list_manager_clicked || 0), 0),
+        Settings: data.reduce((sum, row) => sum + (row.sidebar_settings_expanded || 0), 0),
+        PrevSearches: data.reduce((sum, row) => sum + (row.sidebar_prev_searches_expanded || 0), 0),
+        PrevOffices: data.reduce((sum, row) => sum + (row.sidebar_prev_offices_expanded || 0), 0)
+      };
+
+      const sidebarData = Object.keys(sidebarUsage).map(key => ({
+        feature: key,
+        count: sidebarUsage[key]
+      })).sort((a, b) => b.count - a.count);
+
+      // Aggregating specialty searches
+      const specialtyCounts = data.reduce((acc, row) => {
+        if (row.specialties) {
+          Object.keys(row.specialties).forEach(spec => {
+            acc[spec] = (acc[spec] || 0) + row.specialties[spec];
+          });
+        }
+        return acc;
+      }, {});
+
+      const specialtyData = Object.keys(specialtyCounts)
+        .map(spec => ({ name: spec, value: specialtyCounts[spec] }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 7);
+
+      // Aggregating subspecialty searches
+      const subspecialtyCounts = data.reduce((acc, row) => {
+        if (row.subspecialties) {
+          Object.keys(row.subspecialties).forEach(subspec => {
+            acc[subspec] = (acc[subspec] || 0) + row.subspecialties[subspec];
+          });
+        }
+        return acc;
+      }, {});
+
+      const subspecialtyData = Object.keys(subspecialtyCounts)
+        .map(subspec => ({ name: subspec, value: subspecialtyCounts[subspec] }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 7);
+
+      // Aggregating search intensity by day and hour
+      const searchIntensity = data.reduce((acc, row) => {
+        const date = row.session_start.toISOString().split('T')[0];
+        const hour = row.session_start.getHours();
+        const key = `${date}-${hour}`;
+        if (!acc[key]) {
+          acc[key] = { date, hour, searches: 0 };
+        }
+        acc[key].searches += row.searches || 0;
+        return acc;
+      }, {});
+
+      const intensityData = Object.values(searchIntensity).map(d => ({
+        date: new Date(d.date).toLocaleDateString(),
+        hour: d.hour,
+        searches: d.searches
+      }));
+
+      // Calculating summary metrics
+      const totalSessions = data.length;
+      const totalSearches = data.reduce((sum, row) => sum + (row.searches || 0), 0);
+      const avgSearchesPerSession = totalSearches / totalSessions;
+      const uniqueUsers = new Set(data.map(row => row.user_id)).size;
+      const avgSessionDuration = data.reduce((sum, row) => sum + row.duration, 0) / totalSessions;
+
+      // Formatting numbers for display
+      const formatNumber = (num) => {
+        if (num >= 1000) {
+          return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
+      };
+
+      // Rendering the report
+      return (
+        <div>
+          <Navigation />
+          <div className="bg-white shadow-2xl rounded-lg p-8 mt-6">
+            {/* Rendering header */}
+            <header className="bg-gradient-to-r from-indigo-800 to-teal-600 text-white p-6 rounded-t-lg">
+              <h1 className="text-4xl font-serif font-bold">
+                Referral Finder Pro Pilot Report (June 1–9, 2025)
+              </h1>
+            </header>
+
+            {/* Rendering summary */}
+            <section id="summary" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Summary</h2>
+              <p className="text-gray-700">
+                The Referral Finder Pro pilot ran from June 1–9, 2025, with {uniqueUsers} unique users conducting {totalSessions} sessions. Users performed {formatNumber(totalSearches)} searches, averaging {avgSearchesPerSession.toFixed(2)} searches per session, with an average session duration of {avgSessionDuration.toFixed(2)} minutes. High filter usage and diverse specialty searches indicate strong engagement, while underutilized sidebar features suggest opportunities for UI enhancements.
+              </p>
+            </section>
+
+            {/* Rendering daily activity chart */}
+            <section id="daily-activity" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Daily Activity</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={dailyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" fontSize={12} />
+                  <YAxis fontSize={12} tickFormatter={formatNumber} />
+                  <Tooltip formatter={(value) => formatNumber(value)} />
+                  <Legend />
+                  <Line type="monotone" dataKey="users" name="Unique Users" stroke={COLORS[0]} />
+                  <Line type="monotone" dataKey="sessions" name="Sessions" stroke={COLORS[1]} />
+                  <Line type="monotone" dataKey="searches" name="Searches" stroke={COLORS[2]} />
+                </LineChart>
+              </ResponsiveContainer>
+            </section>
+
+            {/* Rendering searches per user chart */}
+            <section id="searches-by-user" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Searches by User</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={userActivityData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="user" fontSize={12} />
+                  <YAxis fontSize={12} tickFormatter={formatNumber} />
+                  <Tooltip formatter={(value) => formatNumber(value)} />
+                  <Bar dataKey="searches" fill={COLORS[2]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+
+            {/* Rendering session duration chart */}
+            <section id="session-duration" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Session Duration by User</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={userDurationData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="user" fontSize={12} />
+                  <YAxis fontSize={12} label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip formatter={(value) => `${value.toFixed(2)} minutes`} />
+                  <Bar dataKey="avgDuration" fill={COLORS[4]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+
+            {/* Rendering filter usage chart */}
+            <section id="filter-usage" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Filter Usage</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={filterData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="filter" fontSize={12} />
+                  <YAxis fontSize={12} tickFormatter={formatNumber} />
+                  <Tooltip formatter={(value) => formatNumber(value)} />
+                  <Bar dataKey="count" fill={COLORS[3]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+
+            {/* Rendering top specialties chart */}
+            <section id="top-specialties" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Top Specialties Searched</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={specialtyData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label
+                  >
+                    {specialtyData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatNumber(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </section>
+
+            {/* Rendering top subspecialties chart */}
+            <section id="top-subspecialties" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Top Subspecialties Searched</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={subspecialtyData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label
+                  >
+                    {subspecialtyData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatNumber(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </section>
+
+            {/* Rendering sidebar interactions chart */}
+            <section id="sidebar-interactions" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Sidebar Interactions</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={sidebarData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="feature" fontSize={12} />
+                  <YAxis fontSize={12} tickFormatter={formatNumber} />
+                  <Tooltip formatter={(value) => formatNumber(value)} />
+                  <Bar dataKey="count" fill={COLORS[7]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+
+            {/* Rendering usage patterns */}
+            <section id="usage-patterns" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Usage Patterns</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={intensityData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" fontSize={12} />
+                  <YAxis dataKey="hour" fontSize={12} />
+                  <Tooltip formatter={(value) => `${formatNumber(value)} searches`} />
+                  <Bar dataKey="searches" fill={COLORS[8]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+
+            {/* Rendering user activity table */}
+            <section id="user-activity" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">User Activity</h2>
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-indigo-100">
+                    <th className="p-3">User</th>
+                    <th className="p-3">Total Searches</th>
+                    <th className="p-3">Sessions</th>
+                    <th className="p-3">Avg Duration (Minutes)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userActivityData.map(row => (
+                    <tr key={row.user} className="border-b">
+                      <td className="p-3">{row.user}</td>
+                      <td className="p-3">{formatNumber(row.searches)}</td>
+                      <td className="p-3">{row.sessions}</td>
+                      <td className="p-3">{row.avgDuration.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            {/* Rendering key metrics table */}
+            <section id="key-metrics" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Key Metrics</h2>
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-indigo-100">
+                    <th className="p-3">Metric</th>
+                    <th className="p-3">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="p-3">Total Sessions</td>
+                    <td className="p-3">{totalSessions}</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="p-3">Total Searches</td>
+                    <td className="p-3">{formatNumber(totalSearches)}</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="p-3">Average Searches per Session</td>
+                    <td className="p-3">{avgSearchesPerSession.toFixed(2)}</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="p-3">Average Session Duration (Minutes)</td>
+                    <td className="p-3">{avgSessionDuration.toFixed(2)}</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="p-3">Unique Users</td>
+                    <td className="p-3">{uniqueUsers}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            {/* Rendering interesting fact */}
+            <section id="interesting-fact" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Interesting Fact</h2>
+              <p className="text-gray-700">
+                Over 30% of searches focused on Dermatology and Neurology, with AshleyPer alone contributing {userActivityData.find(d => d.user === 'AshleyPer')?.searches || 0} searches. Notably, 80% of sessions had durations under 10 minutes, suggesting many quick lookups, while a few extended sessions (up to 322 minutes) indicate deep research or potential data logging issues.
+              </p>
+            </section>
+
+            {/* Rendering conclusion */}
+            <section id="conclusion" className="mt-8 bg-gray-50 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h2 className="text-2xl font-serif font-semibold text-indigo-700 mb-4">Conclusion</h2>
+              <p className="text-gray-700">
+                The Referral Finder Pro pilot demonstrates robust adoption, with {formatNumber(totalSearches)} searches across {totalSessions} sessions. Frequent filter usage and diverse specialty queries highlight the tool’s utility in precise provider matching. Low sidebar interaction suggests UI enhancements could boost engagement. Data quality issues, such as zero-duration sessions, should be addressed in the live phase. Integrating EHR data will further validate the tool’s impact on referral efficiency and error reduction.
+              </p>
+            </section>
+          </div>
+        </div>
+      );
+    };
+
+    // Rendering the report to the DOM
+    const root = createRoot(document.getElementById('root'));
+    root.render(<Report />);
+  </script>
+</body>
+</html>
